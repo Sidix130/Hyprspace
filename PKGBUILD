@@ -1,4 +1,4 @@
-# Maintainer: Sidix130 <your-email@example.com>
+# Maintainer: Sidix130 https://github.com/Sidix130 - sidix.dev@gmail.com
 
 pkgname=hyprspace-git
 pkgver=r236.9c73bec
