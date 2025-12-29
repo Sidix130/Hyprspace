@@ -1,0 +1,22 @@
+pkgbase = hyprspace-git
+	pkgdesc = A workspace overview plugin for Hyprland
+	pkgver = r0.0
+	pkgrel = 1
+	url = https://github.com/Sidix130/Hyprspace
+	arch = x86_64
+	license = BSD
+	makedepends = git
+	makedepends = make
+	makedepends = gcc
+	makedepends = pkg-config
+	depends = hyprland>=0.52.0
+	depends = pixman
+	depends = libdrm
+	depends = cairo
+	depends = pango
+	provides = hyprspace
+	conflicts = hyprspace
+	source = git+https://github.com/Sidix130/Hyprspace.git
+	sha256sums = SKIP
+
+pkgname = hyprspace-git
