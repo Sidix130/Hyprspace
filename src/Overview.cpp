@@ -1,6 +1,8 @@
 #include "Overview.hpp"
 #include "Globals.hpp"
 
+using namespace Desktop::View;
+
 CHyprspaceWidget::CHyprspaceWidget(uint64_t inOwnerID) {
     ownerID = inOwnerID;
 

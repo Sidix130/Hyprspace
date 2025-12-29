@@ -1,6 +1,11 @@
 #pragma once
-#include <hyprland/src/Compositor.hpp>
+#include <helpers/AnimatedVariable.hpp> 
+#include <Compositor.hpp>
+#include <desktop/view/LayerSurface.hpp>
 #include <hyprutils/animation/AnimationConfig.hpp>
+#include <vector>
+#include <tuple>
+#include <chrono>
 
 class CHyprspaceWidget {
 
@@ -31,9 +36,11 @@ class CHyprspaceWidget {
     double avgSwipeSpeed = 0.;
     // number of swiping speed frames recorded
     int swipePoints = 0;
-    // on second thought, this seems redundant as we could just write to curYOffset while swiping
+    
     double curSwipeOffset = 10.;
 
+    // MIGRATION v0.52 : PHLANIMVAR est maintenant défini via <helpers/AnimatedVariable.hpp>
+    // C'est un std::unique_ptr<CAnimatedVariable<T>>
     PHLANIMVAR<float> workspaceScrollOffset;
 
 public:

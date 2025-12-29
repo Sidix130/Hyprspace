@@ -1,11 +1,17 @@
 #include "Overview.hpp"
 #include "Globals.hpp"
-#include "src/helpers/memory/Memory.hpp"
-#include <hyprland/src/render/pass/RectPassElement.hpp>
-#include <hyprland/src/render/pass/BorderPassElement.hpp>
-#include <hyprland/src/render/pass/RendererHintsPassElement.hpp>
+#include <render/pass/RectPassElement.hpp>
+#include <render/pass/BorderPassElement.hpp>
+#include <render/pass/RendererHintsPassElement.hpp>
 #include <hyprlang.hpp>
 #include <hyprutils/utils/ScopeGuard.hpp>
+#include <desktop/view/Window.hpp>
+#include <desktop/view/LayerSurface.hpp>
+#include <desktop/rule/windowRule/WindowRuleApplicator.hpp>
+#include <desktop/types/OverridableVar.hpp>
+#include <climits>
+
+using namespace Desktop::View;
 
 // What are we even doing...
 class CFakeDamageElement : public IPassElement {
@@ -71,9 +77,10 @@ void renderWindowStub(PHLWINDOW pWindow, PHLMONITOR pMonitor, PHLWORKSPACE pWork
 
     const auto oWorkspace = pWindow->m_workspace;
     const auto oFullscreen = pWindow->m_fullscreenState;
-    const auto oRealPosition = pWindow->m_realPosition->value();
-    const auto oSize = pWindow->m_realSize->value();
-    const auto oUseNearestNeighbor = pWindow->m_windowData.nearestNeighbor;
+    const auto windowBox = pWindow->getWindowMainSurfaceBox();
+    const auto oRealPosition = windowBox.pos();
+    const auto oSize = windowBox.size();
+    const auto oUseNearestNeighbor = pWindow->m_ruleApplicator->nearestNeighbor().value();
     const auto oPinned = pWindow->m_pinned;
     const auto oDraggedWindow = g_pInputManager->m_currentlyDraggedWindow;
     const auto oDragMode = g_pInputManager->m_dragMode;
@@ -87,11 +94,11 @@ void renderWindowStub(PHLWINDOW pWindow, PHLMONITOR pMonitor, PHLWORKSPACE pWork
     renderModif.modifs.push_back({SRenderModifData::eRenderModifType::RMOD_TYPE_SCALE, curScaling});
     renderModif.enabled = true;
     pWindow->m_workspace = pWorkspaceOverride;
-    pWindow->m_fullscreenState = SFullscreenState{FSMODE_NONE};
-    pWindow->m_windowData.nearestNeighbor = false;
+    pWindow->m_fullscreenState = Desktop::View::SFullscreenState{FSMODE_NONE};
+    pWindow->m_ruleApplicator->nearestNeighbor() = false;
     pWindow->m_isFloating = false;
     pWindow->m_pinned = true;
-    pWindow->m_windowData.rounding = CWindowOverridableVar<Hyprlang::INT>(pWindow->rounding() * curScaling * pMonitor->m_scale, eOverridePriority::PRIORITY_SET_PROP);
+    pWindow->m_ruleApplicator->rounding() = Desktop::Types::COverridableVar<Hyprlang::INT>(pWindow->rounding() * curScaling * pMonitor->m_scale, Desktop::Types::eOverridePriority::PRIORITY_SET_PROP);
     g_pInputManager->m_currentlyDraggedWindow = pWindow; // override these and force INTERACTIVERESIZEINPROGRESS = true to trick the renderer
     g_pInputManager->m_dragMode = MBIND_RESIZE;
 
@@ -108,10 +115,10 @@ void renderWindowStub(PHLWINDOW pWindow, PHLMONITOR pMonitor, PHLWORKSPACE pWork
     // restore values for normal window render
     pWindow->m_workspace = oWorkspace;
     pWindow->m_fullscreenState = oFullscreen;
-    pWindow->m_windowData.nearestNeighbor = oUseNearestNeighbor;
+    pWindow->m_ruleApplicator->nearestNeighbor() = oUseNearestNeighbor;
     pWindow->m_isFloating = oFloating;
     pWindow->m_pinned = oPinned;
-    pWindow->m_windowData.rounding.unset(eOverridePriority::PRIORITY_SET_PROP);
+    pWindow->m_ruleApplicator->rounding().unset(Desktop::Types::eOverridePriority::PRIORITY_SET_PROP);
     g_pInputManager->m_currentlyDraggedWindow = oDraggedWindow;
     g_pInputManager->m_dragMode = oDragMode;
 }
@@ -121,8 +128,10 @@ void renderLayerStub(PHLLS pLayer, PHLMONITOR pMonitor, CBox rectOverride, times
 
     if (!pLayer->m_mapped || pLayer->m_readyToDelete || !pLayer->m_layerSurface) return;
 
-    Vector2D oRealPosition = pLayer->m_realPosition->value();
-    Vector2D oSize = pLayer->m_realSize->value();
+    const auto layerBoxOpt = ((Desktop::View::CLayerSurface*)pLayer.get())->surfaceLogicalBox();
+    if (!layerBoxOpt.has_value()) return;
+    Vector2D oRealPosition = layerBoxOpt->pos();
+    Vector2D oSize = layerBoxOpt->size();
     float oAlpha = pLayer->m_alpha->value(); // set to 1 to show hidden top layer
     const auto oFadingOut = pLayer->m_fadingOut;
 
@@ -247,7 +256,7 @@ void CHyprspaceWidget::draw() {
     // add a new empty workspace at last
     if (Config::showNewWorkspace) {
         // get the lowest empty workspce id after the highest id of current workspace
-        while (g_pCompositor->getWorkspaceByID(highestID) != nullptr) highestID++;
+        while (g_pCompositor->getWorkspaceByID(highestID)) highestID++;
         workspaces.push_back(highestID);
     }
 
@@ -301,15 +310,23 @@ void CHyprspaceWidget::draw() {
         // background and bottom layers
         if (!Config::hideBackgroundLayers) {
             for (auto& ls : owner->m_layerSurfaceLayers[0]) {
-                CBox layerBox = {curWorkspaceBox.pos() + (ls->m_realPosition->value() - owner->m_position) * monitorSizeScaleFactor, ls->m_realSize->value() * monitorSizeScaleFactor};
+                const auto lsPtr = ls.lock();
+                if (!lsPtr) continue;
+                const auto lsBox = ((Desktop::View::CLayerSurface*)lsPtr.get())->surfaceLogicalBox();
+                if (!lsBox.has_value()) continue;
+                CBox layerBox = {curWorkspaceBox.pos() + (lsBox->pos() - owner->m_position) * monitorSizeScaleFactor, lsBox->size() * monitorSizeScaleFactor};
                 g_pHyprOpenGL->m_renderData.clipBox = curWorkspaceBox;
-                renderLayerStub(ls.lock(), owner, layerBox, &time);
+                renderLayerStub(lsPtr, owner, layerBox, &time);
                 g_pHyprOpenGL->m_renderData.clipBox = CBox();
             }
             for (auto& ls : owner->m_layerSurfaceLayers[1]) {
-                CBox layerBox = {curWorkspaceBox.pos() + (ls->m_realPosition->value() - owner->m_position) * monitorSizeScaleFactor, ls->m_realSize->value() * monitorSizeScaleFactor};
+                const auto lsPtr = ls.lock();
+                if (!lsPtr) continue;
+                const auto lsBox = ((Desktop::View::CLayerSurface*)lsPtr.get())->surfaceLogicalBox();
+                if (!lsBox.has_value()) continue;
+                CBox layerBox = {curWorkspaceBox.pos() + (lsBox->pos() - owner->m_position) * monitorSizeScaleFactor, lsBox->size() * monitorSizeScaleFactor};
                 g_pHyprOpenGL->m_renderData.clipBox = curWorkspaceBox;
-                renderLayerStub(ls.lock(), owner, layerBox, &time);
+                renderLayerStub(lsPtr, owner, layerBox, &time);
                 g_pHyprOpenGL->m_renderData.clipBox = CBox();
             }
         }
@@ -329,15 +346,16 @@ void CHyprspaceWidget::draw() {
 
         }
 
-        if (ws != nullptr) {
+        if (ws) {
             // draw tiled windows
             for (auto& w : g_pCompositor->m_windows) {
                 if (!w) continue;
                 if (w->m_workspace == ws && !w->m_isFloating) {
-                    double wX = curWorkspaceRectOffsetX + ((w->m_realPosition->value().x - owner->m_position.x) * monitorSizeScaleFactor * owner->m_scale);
-                    double wY = curWorkspaceRectOffsetY + ((w->m_realPosition->value().y - owner->m_position.y) * monitorSizeScaleFactor * owner->m_scale);
-                    double wW = w->m_realSize->value().x * monitorSizeScaleFactor * owner->m_scale;
-                    double wH = w->m_realSize->value().y * monitorSizeScaleFactor * owner->m_scale;
+                    const auto wBox = w->getWindowMainSurfaceBox();
+                    double wX = curWorkspaceRectOffsetX + ((wBox.x - owner->m_position.x) * monitorSizeScaleFactor * owner->m_scale);
+                    double wY = curWorkspaceRectOffsetY + ((wBox.y - owner->m_position.y) * monitorSizeScaleFactor * owner->m_scale);
+                    double wW = wBox.width * monitorSizeScaleFactor * owner->m_scale;
+                    double wH = wBox.height * monitorSizeScaleFactor * owner->m_scale;
                     if (!(wW > 0 && wH > 0)) continue;
                     CBox curWindowBox = {wX, wY, wW, wH};
                     g_pHyprOpenGL->m_renderData.clipBox = curWorkspaceBox;
@@ -350,10 +368,11 @@ void CHyprspaceWidget::draw() {
             for (auto& w : g_pCompositor->m_windows) {
                 if (!w) continue;
                 if (w->m_workspace == ws && w->m_isFloating && ws->getLastFocusedWindow() != w) {
-                    double wX = curWorkspaceRectOffsetX + ((w->m_realPosition->value().x - owner->m_position.x) * monitorSizeScaleFactor * owner->m_scale);
-                    double wY = curWorkspaceRectOffsetY + ((w->m_realPosition->value().y - owner->m_position.y) * monitorSizeScaleFactor * owner->m_scale);
-                    double wW = w->m_realSize->value().x * monitorSizeScaleFactor * owner->m_scale;
-                    double wH = w->m_realSize->value().y * monitorSizeScaleFactor * owner->m_scale;
+                    const auto wBox = w->getWindowMainSurfaceBox();
+                    double wX = curWorkspaceRectOffsetX + ((wBox.x - owner->m_position.x) * monitorSizeScaleFactor * owner->m_scale);
+                    double wY = curWorkspaceRectOffsetY + ((wBox.y - owner->m_position.y) * monitorSizeScaleFactor * owner->m_scale);
+                    double wW = wBox.width * monitorSizeScaleFactor * owner->m_scale;
+                    double wH = wBox.height * monitorSizeScaleFactor * owner->m_scale;
                     if (!(wW > 0 && wH > 0)) continue;
                     CBox curWindowBox = {wX, wY, wW, wH};
                     g_pHyprOpenGL->m_renderData.clipBox = curWorkspaceBox;
@@ -366,10 +385,11 @@ void CHyprspaceWidget::draw() {
             if (ws->getLastFocusedWindow())
                 if (ws->getLastFocusedWindow()->m_isFloating) {
                     const auto w = ws->getLastFocusedWindow();
-                    double wX = curWorkspaceRectOffsetX + ((w->m_realPosition->value().x - owner->m_position.x) * monitorSizeScaleFactor * owner->m_scale);
-                    double wY = curWorkspaceRectOffsetY + ((w->m_realPosition->value().y - owner->m_position.y) * monitorSizeScaleFactor * owner->m_scale);
-                    double wW = w->m_realSize->value().x * monitorSizeScaleFactor * owner->m_scale;
-                    double wH = w->m_realSize->value().y * monitorSizeScaleFactor * owner->m_scale;
+                    const auto wBox = w->getWindowMainSurfaceBox();
+                    double wX = curWorkspaceRectOffsetX + ((wBox.x - owner->m_position.x) * monitorSizeScaleFactor * owner->m_scale);
+                    double wY = curWorkspaceRectOffsetY + ((wBox.y - owner->m_position.y) * monitorSizeScaleFactor * owner->m_scale);
+                    double wW = wBox.width * monitorSizeScaleFactor * owner->m_scale;
+                    double wH = wBox.height * monitorSizeScaleFactor * owner->m_scale;
                     if (!(wW > 0 && wH > 0)) continue;
                     CBox curWindowBox = {wX, wY, wW, wH};
                     g_pHyprOpenGL->m_renderData.clipBox = curWorkspaceBox;
@@ -383,17 +403,25 @@ void CHyprspaceWidget::draw() {
             // this layer is hidden for real workspace when panel is displayed
             if (!Config::hideTopLayers)
                 for (auto& ls : owner->m_layerSurfaceLayers[2]) {
-                    CBox layerBox = {curWorkspaceBox.pos() + (ls->m_realPosition->value() - owner->m_position) * monitorSizeScaleFactor, ls->m_realSize->value() * monitorSizeScaleFactor};
+                    const auto lsPtr = ls.lock();
+                    if (!lsPtr) continue;
+                    const auto lsBox = ((Desktop::View::CLayerSurface*)lsPtr.get())->surfaceLogicalBox();
+                    if (!lsBox.has_value()) continue;
+                    CBox layerBox = {curWorkspaceBox.pos() + (lsBox->pos() - owner->m_position) * monitorSizeScaleFactor, lsBox->size() * monitorSizeScaleFactor};
                     g_pHyprOpenGL->m_renderData.clipBox = curWorkspaceBox;
-                    renderLayerStub(ls.lock(), owner, layerBox, &time);
+                    renderLayerStub(lsPtr, owner, layerBox, &time);
                     g_pHyprOpenGL->m_renderData.clipBox = CBox();
                 }
 
             if (!Config::hideOverlayLayers)
                 for (auto& ls : owner->m_layerSurfaceLayers[3]) {
-                    CBox layerBox = {curWorkspaceBox.pos() + (ls->m_realPosition->value() - owner->m_position) * monitorSizeScaleFactor, ls->m_realSize->value() * monitorSizeScaleFactor};
+                    const auto lsPtr = ls.lock();
+                    if (!lsPtr) continue;
+                    const auto lsBox = ((Desktop::View::CLayerSurface*)lsPtr.get())->surfaceLogicalBox();
+                    if (!lsBox.has_value()) continue;
+                    CBox layerBox = {curWorkspaceBox.pos() + (lsBox->pos() - owner->m_position) * monitorSizeScaleFactor, lsBox->size() * monitorSizeScaleFactor};
                     g_pHyprOpenGL->m_renderData.clipBox = curWorkspaceBox;
-                    renderLayerStub(ls.lock(), owner, layerBox, &time);
+                    renderLayerStub(lsPtr, owner, layerBox, &time);
                     g_pHyprOpenGL->m_renderData.clipBox = CBox();
                 }
         }

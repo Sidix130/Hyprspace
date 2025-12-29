@@ -1,6 +1,8 @@
-#include <hyprland/src/plugins/PluginSystem.hpp>
-#include <hyprland/src/plugins/PluginAPI.hpp>
-#include <hyprland/src/devices/IKeyboard.hpp>
+#include <plugins/PluginSystem.hpp>
+#include <plugins/PluginAPI.hpp>
+#include <devices/IKeyboard.hpp>
+#include <debug/Log.hpp>
+#include <desktop/types/OverridableVar.hpp>
 #include "Overview.hpp"
 #include "Globals.hpp"
 
@@ -142,11 +144,11 @@ void onRender(void* thisptr, SCallbackInfo& info, std::any args) {
                 if (g_oAlpha != -1) {
                     if (const auto curWindow = g_pInputManager->m_currentlyDraggedWindow.lock()) {
                         curWindow->m_activeInactiveAlpha->setValueAndWarp(Config::dragAlpha);
-                        curWindow->m_windowData.noBlur = CWindowOverridableVar<bool>(true, eOverridePriority::PRIORITY_SET_PROP);
+                        curWindow->m_ruleApplicator->noBlur() = Desktop::Types::COverridableVar<bool>(true, Desktop::Types::eOverridePriority::PRIORITY_SET_PROP);
                         timespec time;
                         clock_gettime(CLOCK_MONOTONIC, &time);
                         (*(tRenderWindow)pRenderWindow)(g_pHyprRenderer.get(), curWindow, widget->getOwner(), &time, true, RENDER_PASS_MAIN, false, false);
-                        curWindow->m_windowData.noBlur.unset(eOverridePriority::PRIORITY_SET_PROP);
+                        curWindow->m_ruleApplicator->noBlur().unset(Desktop::Types::eOverridePriority::PRIORITY_SET_PROP);
                         curWindow->m_activeInactiveAlpha->setValueAndWarp(g_oAlpha);
                     }
                 }
@@ -288,7 +290,7 @@ PHLMONITOR g_pTouchedMonitor;
 void onTouchDown(void* thisptr, SCallbackInfo& info, std::any args) {
     const auto e = std::any_cast<ITouch::SDownEvent>(args);
     auto targetMonitor = g_pCompositor->getMonitorFromName(!e.device->m_boundOutput.empty() ? e.device->m_boundOutput : "");
-    targetMonitor = targetMonitor ? targetMonitor : g_pCompositor->m_lastMonitor.lock();
+    targetMonitor = targetMonitor ? targetMonitor : g_pCompositor->getMonitorFromCursor();
 
     const auto widget = getWidgetForMonitor(targetMonitor);
     if (widget != nullptr && targetMonitor != nullptr) {

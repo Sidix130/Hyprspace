@@ -1,13 +1,13 @@
 #pragma once
 
-#include <hyprland/src/plugins/PluginAPI.hpp>
-#include <hyprland/src/Compositor.hpp>
-#include <hyprland/src/render/Renderer.hpp>
-#include <hyprland/src/config/ConfigManager.hpp>
-#include <hyprland/src/managers/input/InputManager.hpp>
-#include <hyprland/src/managers/LayoutManager.hpp>
-#include <hyprland/src/managers/animation/AnimationManager.hpp>
-#include <hyprland/src/config/ConfigValue.hpp>
+#include <plugins/PluginAPI.hpp>
+#include <Compositor.hpp>
+#include <render/Renderer.hpp>
+#include <config/ConfigManager.hpp>
+#include <managers/input/InputManager.hpp>
+#include <managers/LayoutManager.hpp>
+#include <managers/animation/AnimationManager.hpp>
+#include <config/ConfigValue.hpp>
 
 inline HANDLE pHandle = NULL;
 
