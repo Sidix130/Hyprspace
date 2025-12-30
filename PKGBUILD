@@ -1,7 +1,7 @@
 # Maintainer: Sidix130 https://github.com/Sidix130 - sidix.dev@gmail.com
 
 pkgname=hyprspace-git
-pkgver=r236.9c73bec
+pkgver=r238.12cfe04
 pkgrel=1
 pkgdesc="A workspace overview plugin for Hyprland"
 arch=('x86_64')

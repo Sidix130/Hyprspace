@@ -1,7 +1,7 @@
 #include "Overview.hpp"
 #include "Globals.hpp"
 
-using namespace Desktop::View;
+// using namespace Desktop::View;
 
 bool CHyprspaceWidget::buttonEvent(bool pressed, Vector2D coords) {
     bool Return;

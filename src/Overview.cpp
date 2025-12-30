@@ -1,7 +1,8 @@
 #include "Overview.hpp"
 #include "Globals.hpp"
+#include <debug/Log.hpp>
 
-using namespace Desktop::View;
+// using namespace Desktop::View;
 
 CHyprspaceWidget::CHyprspaceWidget(uint64_t inOwnerID) {
     ownerID = inOwnerID;
@@ -9,16 +10,20 @@ CHyprspaceWidget::CHyprspaceWidget(uint64_t inOwnerID) {
     curAnimationConfig = *g_pConfigManager->getAnimationPropertyConfig("windows");
 
     // the fuck is pValues???
-    curAnimation = *curAnimationConfig.pValues.lock();
-    *curAnimationConfig.pValues.lock() = curAnimation;
+    auto pValues = curAnimationConfig.pValues.lock();
+    if (pValues) {
+        curAnimation = *pValues;
+        *pValues = curAnimation;
+    }
 
     if (Config::overrideAnimSpeed > 0)
         curAnimation.internalSpeed = Config::overrideAnimSpeed;
 
-    g_pAnimationManager->createAnimation(0.F, curYOffset, curAnimationConfig.pValues.lock(), AVARDAMAGE_ENTIRE);
-    g_pAnimationManager->createAnimation(0.F, workspaceScrollOffset, curAnimationConfig.pValues.lock(), AVARDAMAGE_ENTIRE);
-    curYOffset->setValueAndWarp(Config::panelHeight);
-    workspaceScrollOffset->setValueAndWarp(0);
+    auto pValuesLocked = curAnimationConfig.pValues.lock();
+    g_pAnimationManager->createAnimation(0.F, curYOffset, pValuesLocked, AVARDAMAGE_ENTIRE);
+    g_pAnimationManager->createAnimation(0.F, workspaceScrollOffset, pValuesLocked, AVARDAMAGE_ENTIRE);
+    if (curYOffset) curYOffset->setValueAndWarp(Config::panelHeight);
+    if (workspaceScrollOffset) workspaceScrollOffset->setValueAndWarp(0);
 }
 
 // TODO: implement deconstructor and delete widget on monitor unplug
@@ -29,10 +34,12 @@ PHLMONITOR CHyprspaceWidget::getOwner() {
 }
 
 void CHyprspaceWidget::show() {
+    Debug::log(LOG, "[Hyprspace] show() start");
     auto owner = getOwner();
     if (!owner) return;
 
     if (prevFullscreen.empty()) {
+        Debug::log(LOG, "[Hyprspace] show() unfullscreening windows");
         // unfullscreen all windows
         for (auto& ws : g_pCompositor->getWorkspaces()) {
             if (ws->m_monitor->m_id == ownerID) {
@@ -54,12 +61,14 @@ void CHyprspaceWidget::show() {
     if (oLayerAlpha.empty() && Config::hideRealLayers) {
         for (auto& ls : owner->m_layerSurfaceLayers[2]) {
             //ls->startAnimation(false);
+            if (!ls->m_alpha) continue;
             oLayerAlpha.emplace_back(std::make_tuple(ls.lock(), ls->m_alpha->goal()));
             *ls->m_alpha = 0.f;
             ls->m_fadingOut = true;
         }
         for (auto& ls : owner->m_layerSurfaceLayers[3]) {
             //ls->startAnimation(false);
+            if (!ls->m_alpha) continue;
             oLayerAlpha.emplace_back(std::make_tuple(ls.lock(), ls->m_alpha->goal()));
             *ls->m_alpha = 0.f;
             ls->m_fadingOut = true;
@@ -75,11 +84,14 @@ void CHyprspaceWidget::show() {
     }
 
     updateLayout();
+    Debug::log(LOG, "[Hyprspace] show() damaging monitor");
     g_pHyprRenderer->damageMonitor(owner);
     g_pCompositor->scheduleFrameForMonitor(owner);
+    Debug::log(LOG, "[Hyprspace] show() end");
 }
 
 void CHyprspaceWidget::hide() {
+    Debug::log(LOG, "[Hyprspace] hide() start");
     auto owner = getOwner();
     if (!owner) return;
 

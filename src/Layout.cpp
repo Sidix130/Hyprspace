@@ -1,6 +1,6 @@
 #include "Overview.hpp"
 #include "Globals.hpp"
-#include <desktop/reserved/ReservedArea.hpp>
+// #include <desktop/reserved/ReservedArea.hpp>
 
 // FIXME: preserve original workspace rules
 void CHyprspaceWidget::updateLayout() {
@@ -36,11 +36,15 @@ void CHyprspaceWidget::updateLayout() {
         }
         pMonitor->m_activeWorkspace = oActiveWorkspace;
         
-        pMonitor->m_reservedArea.resetType(Desktop::RESERVED_DYNAMIC_TYPE_LS);
-        if (!Config::onBottom)
-            pMonitor->m_reservedArea.addType(Desktop::RESERVED_DYNAMIC_TYPE_LS, Vector2D(0.0, (double)currentHeight), Vector2D(0.0, 0.0));
-        else
-            pMonitor->m_reservedArea.addType(Desktop::RESERVED_DYNAMIC_TYPE_LS, Vector2D(0.0, 0.0), Vector2D(0.0, (double)currentHeight));
+        // pMonitor->m_reservedArea.resetType(Desktop::RESERVED_DYNAMIC_TYPE_LS);
+        if (!Config::onBottom) {
+             pMonitor->m_reservedTopLeft = Vector2D(0.0, (double)currentHeight);
+             pMonitor->m_reservedBottomRight = Vector2D(0.0, 0.0);
+        }
+        else {
+             pMonitor->m_reservedTopLeft = Vector2D(0.0, 0.0);
+             pMonitor->m_reservedBottomRight = Vector2D(0.0, (double)currentHeight);
+        }
 
         const auto curRules = std::to_string(pMonitor->activeWorkspaceID()) + ", gapsin:" + std::to_string(Config::gapsIn) + ", gapsout:" + std::to_string(Config::gapsOut);
         if (Config::overrideGaps) g_pConfigManager->handleWorkspaceRules("", curRules);

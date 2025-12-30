@@ -1,0 +1,69 @@
+🧪 Lancement du Laboratoire Hyprland (Base JaKooLit)...
+[LOG] User-specified config location: '/home/sidix/.config/hypr/hypr-lab.conf'
+Welcome to Hyprland!
+[LOG] Instance Signature: 386376400119dd46a767c9f8c8791fd22c7b6e61_1767107577_2091130475
+[LOG] Runtime directory: /run/user/1000/hypr/386376400119dd46a767c9f8c8791fd22c7b6e61_1767107577_2091130475
+[LOG] Hyprland PID: 230110
+[LOG] ===== SYSTEM INFO: =====
+[LOG] System name: Linux
+[LOG] Node name: archlinux
+[LOG] Release: 6.18.2-zen2-1-zen
+[LOG] Version: #1 ZEN SMP PREEMPT_DYNAMIC Thu, 18 Dec 2025 18:00:58 +0000
+
+
+[LOG] GPU information:
+0000:01:00.0 VGA compatible controller [0300]: NVIDIA Corporation TU117 [GeForce GTX 1650] [10de:1f82] (rev a1) (prog-if 00 [VGA controller])
+
+
+[1;33m[WARN] Warning: you're using an NVIDIA GPU. Make sure you follow the instructions on the wiki if anything is amiss.
+[0m
+[LOG] os-release:
+NAME="Arch Linux"
+PRETTY_NAME="Arch Linux"
+ID=arch
+BUILD_ID=rolling
+ANSI_COLOR="38;2;23;147;209"
+HOME_URL="https://archlinux.org/"
+DOCUMENTATION_URL="https://wiki.archlinux.org/"
+SUPPORT_URL="https://bbs.archlinux.org/"
+BUG_REPORT_URL="https://gitlab.archlinux.org/groups/archlinux/-/issues"
+PRIVACY_POLICY_URL="https://terms.archlinux.org/docs/privacy-policy/"
+LOGO=archlinux-logo
+[LOG] ========================
+
+
+
+[1;32m[INFO] If you are crashing, or encounter any bugs, please consult https://wiki.hypr.land/Crashes-and-Bugs/
+
+[0m
+[LOG] 
+Current splash: [New year] will be the year of the Hyprland desktop!
+
+
+[LOG] Old rlimit: soft -> 524288, hard -> 524288
+[LOG] New rlimit: soft -> 524288, hard -> 524288
+[LOG] Creating the EventLoopManager!
+[LOG] Creating the HookSystem!
+[LOG] Creating the KeybindManager!
+[LOG] Creating the AnimationManager!
+[LOG] Creating the DynamicPermissionManager!
+[LOG] Creating the ConfigManager!
+[LOG] Using config: /home/sidix/.config/hypr/hypr-lab.conf
+[1;32m[INFO] !!!!HEY YOU, YES YOU!!!!: further logs to stdout / logfile are disabled by default. BEFORE SENDING THIS LOG, ENABLE THEM. Use debug:disable_logs = false to do so: https://wiki.hypr.land/Configuring/Variables/#debug[0m
+[LOG] Creating the CHyprError!
+[LOG] Creating the LayoutManager!
+[LOG] Creating the TokenManager!
+[LOG] [hookSystem] New hook event registered: preConfigReload
+[LOG] Using config: /home/sidix/.config/hypr/hypr-lab.conf
+[LOG] CWindowRule: direct prop rule found, rewritten noblur -> prop noblur
+[LOG] CWindowRule: direct prop rule found, rewritten keepaspectratio -> prop keepaspectratio
+[LOG] CWindowRule: direct prop rule found, rewritten noblur -> prop noblur
+unable to lock lockfile /run/user/1000/wayland-1.lock, maybe another compositor is running
+The XKEYBOARD keymap compiler (xkbcomp) reports:
+> Warning:          Unsupported maximum keycode 708, clipping.
+>                   X11 cannot support keycodes above 255.
+> Warning:          Virtual modifier Hyper multiply defined
+>                   Using 0, ignoring 0
+> Warning:          Virtual modifier ScrollLock multiply defined
+>                   Using 0, ignoring 0
+Errors from xkbcomp are not fatal to the X server

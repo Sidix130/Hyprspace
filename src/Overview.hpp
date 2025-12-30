@@ -1,7 +1,7 @@
 #pragma once
 #include <helpers/AnimatedVariable.hpp> 
 #include <Compositor.hpp>
-#include <desktop/view/LayerSurface.hpp>
+#include <desktop/LayerSurface.hpp>
 #include <hyprutils/animation/AnimationConfig.hpp>
 #include <vector>
 #include <tuple>

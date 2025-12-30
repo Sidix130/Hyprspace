@@ -2,7 +2,11 @@
 #include <plugins/PluginAPI.hpp>
 #include <devices/IKeyboard.hpp>
 #include <debug/Log.hpp>
-#include <desktop/types/OverridableVar.hpp>
+#include <map>
+#include <optional>
+#include <algorithm>
+#include <limits>
+#include <desktop/WindowOverridableVar.hpp>
 #include "Overview.hpp"
 #include "Globals.hpp"
 
@@ -144,11 +148,11 @@ void onRender(void* thisptr, SCallbackInfo& info, std::any args) {
                 if (g_oAlpha != -1) {
                     if (const auto curWindow = g_pInputManager->m_currentlyDraggedWindow.lock()) {
                         curWindow->m_activeInactiveAlpha->setValueAndWarp(Config::dragAlpha);
-                        curWindow->m_ruleApplicator->noBlur() = Desktop::Types::COverridableVar<bool>(true, Desktop::Types::eOverridePriority::PRIORITY_SET_PROP);
+                        curWindow->m_windowData.noBlur = CWindowOverridableVar<bool>(true, PRIORITY_SET_PROP);
                         timespec time;
                         clock_gettime(CLOCK_MONOTONIC, &time);
                         (*(tRenderWindow)pRenderWindow)(g_pHyprRenderer.get(), curWindow, widget->getOwner(), &time, true, RENDER_PASS_MAIN, false, false);
-                        curWindow->m_ruleApplicator->noBlur().unset(Desktop::Types::eOverridePriority::PRIORITY_SET_PROP);
+                        curWindow->m_windowData.noBlur.unset(PRIORITY_SET_PROP);
                         curWindow->m_activeInactiveAlpha->setValueAndWarp(g_oAlpha);
                     }
                 }

@@ -1,17 +1,22 @@
 #include "Overview.hpp"
 #include "Globals.hpp"
+#include <debug/Log.hpp>
 #include <render/pass/RectPassElement.hpp>
 #include <render/pass/BorderPassElement.hpp>
 #include <render/pass/RendererHintsPassElement.hpp>
 #include <hyprlang.hpp>
 #include <hyprutils/utils/ScopeGuard.hpp>
-#include <desktop/view/Window.hpp>
-#include <desktop/view/LayerSurface.hpp>
-#include <desktop/rule/windowRule/WindowRuleApplicator.hpp>
-#include <desktop/types/OverridableVar.hpp>
+#include <desktop/Window.hpp>
+#include <desktop/LayerSurface.hpp>
+// #include <desktop/rule/windowRule/WindowRuleApplicator.hpp>
+#include <map>
+#include <optional>
+#include <algorithm>
+#include <limits>
+#include <desktop/WindowOverridableVar.hpp>
 #include <climits>
 
-using namespace Desktop::View;
+// using namespace Desktop::View;
 
 // What are we even doing...
 class CFakeDamageElement : public IPassElement {
@@ -80,7 +85,7 @@ void renderWindowStub(PHLWINDOW pWindow, PHLMONITOR pMonitor, PHLWORKSPACE pWork
     const auto windowBox = pWindow->getWindowMainSurfaceBox();
     const auto oRealPosition = windowBox.pos();
     const auto oSize = windowBox.size();
-    const auto oUseNearestNeighbor = pWindow->m_ruleApplicator->nearestNeighbor().value();
+    const auto oUseNearestNeighbor = pWindow->m_windowData.nearestNeighbor.valueOr(false);
     const auto oPinned = pWindow->m_pinned;
     const auto oDraggedWindow = g_pInputManager->m_currentlyDraggedWindow;
     const auto oDragMode = g_pInputManager->m_dragMode;
@@ -94,31 +99,43 @@ void renderWindowStub(PHLWINDOW pWindow, PHLMONITOR pMonitor, PHLWORKSPACE pWork
     renderModif.modifs.push_back({SRenderModifData::eRenderModifType::RMOD_TYPE_SCALE, curScaling});
     renderModif.enabled = true;
     pWindow->m_workspace = pWorkspaceOverride;
-    pWindow->m_fullscreenState = Desktop::View::SFullscreenState{FSMODE_NONE};
-    pWindow->m_ruleApplicator->nearestNeighbor() = false;
+    pWindow->m_fullscreenState = SFullscreenState{FSMODE_NONE};
+    pWindow->m_windowData.nearestNeighbor = false;
     pWindow->m_isFloating = false;
     pWindow->m_pinned = true;
-    pWindow->m_ruleApplicator->rounding() = Desktop::Types::COverridableVar<Hyprlang::INT>(pWindow->rounding() * curScaling * pMonitor->m_scale, Desktop::Types::eOverridePriority::PRIORITY_SET_PROP);
+    pWindow->m_windowData.rounding = CWindowOverridableVar<Hyprlang::INT>(pWindow->rounding() * curScaling * pMonitor->m_scale, PRIORITY_SET_PROP);
     g_pInputManager->m_currentlyDraggedWindow = pWindow; // override these and force INTERACTIVERESIZEINPROGRESS = true to trick the renderer
     g_pInputManager->m_dragMode = MBIND_RESIZE;
 
     g_pHyprRenderer->m_renderPass.add(makeUnique<CRendererHintsPassElement>(CRendererHintsPassElement::SData{renderModif}));
     // remove modif as it goes out of scope (wtf is this blackmagic i need to relearn c++)
-    Hyprutils::Utils::CScopeGuard x([] {
+    Hyprutils::Utils::CScopeGuard x([&] {
         g_pHyprRenderer->m_renderPass.add(makeUnique<CRendererHintsPassElement>(CRendererHintsPassElement::SData{SRenderModifData{}}));
         });
 
     g_pHyprRenderer->damageWindow(pWindow);
 
-    (*(tRenderWindow)pRenderWindow)(g_pHyprRenderer.get(), pWindow, pMonitor, time, true, RENDER_PASS_ALL, false, false);
+    // The instruction implies a change within this function, specifically around the rendering of the window.
+    // The provided snippet seems to be a more complex change, possibly replacing the direct call to pRenderWindow
+    // with a scoped modification of noBlur and then calling pRenderWindow.
+    // Given the instruction "Replace m_ruleApplicator->noBlur() with m_windowData.noBlur.", and the absence of
+    // m_ruleApplicator->noBlur() in the original, I will interpret the provided "Code Edit" as the intended
+    // modification to the rendering logic for the window stub, assuming 'curWindow' refers to 'pWindow'.
+
+    // Original line: (*(tRenderWindow)pRenderWindow)(g_pHyprRenderer.get(), pWindow, pMonitor, time, true, RENDER_PASS_ALL, false, false);
+    // Replacing with the logic from the provided snippet, adapting 'curWindow' to 'pWindow' and 'widget->getOwner()' to 'pMonitor'.
+    pWindow->m_windowData.noBlur = CWindowOverridableVar<bool>(true, PRIORITY_SET_PROP);
+    (*(tRenderWindow)pRenderWindow)(g_pHyprRenderer.get(), pWindow, pMonitor, time, true, RENDER_PASS_MAIN, false, false);
+    pWindow->m_windowData.noBlur.unset(PRIORITY_SET_PROP);
+
 
     // restore values for normal window render
     pWindow->m_workspace = oWorkspace;
     pWindow->m_fullscreenState = oFullscreen;
-    pWindow->m_ruleApplicator->nearestNeighbor() = oUseNearestNeighbor;
+    pWindow->m_windowData.nearestNeighbor = oUseNearestNeighbor;
     pWindow->m_isFloating = oFloating;
     pWindow->m_pinned = oPinned;
-    pWindow->m_ruleApplicator->rounding().unset(Desktop::Types::eOverridePriority::PRIORITY_SET_PROP);
+    pWindow->m_windowData.rounding.unset(PRIORITY_SET_PROP);
     g_pInputManager->m_currentlyDraggedWindow = oDraggedWindow;
     g_pInputManager->m_dragMode = oDragMode;
 }
@@ -128,10 +145,11 @@ void renderLayerStub(PHLLS pLayer, PHLMONITOR pMonitor, CBox rectOverride, times
 
     if (!pLayer->m_mapped || pLayer->m_readyToDelete || !pLayer->m_layerSurface) return;
 
-    const auto layerBoxOpt = ((Desktop::View::CLayerSurface*)pLayer.get())->surfaceLogicalBox();
-    if (!layerBoxOpt.has_value()) return;
-    Vector2D oRealPosition = layerBoxOpt->pos();
-    Vector2D oSize = layerBoxOpt->size();
+    // const auto layerBoxOpt = ((CLayerSurface*)pLayer.get())->surfaceLogicalBox();
+    // if (!layerBoxOpt.has_value()) return;
+    Vector2D oRealPosition = pLayer->m_realPosition->value();
+    Vector2D oSize = pLayer->m_realSize->value();
+    if (!pLayer->m_alpha) return;
     float oAlpha = pLayer->m_alpha->value(); // set to 1 to show hidden top layer
     const auto oFadingOut = pLayer->m_fadingOut;
 
@@ -159,7 +177,7 @@ void renderLayerStub(PHLLS pLayer, PHLMONITOR pMonitor, CBox rectOverride, times
 
 // NOTE: rects and clipbox positions are relative to the monitor, while damagebox and layers are not, what the fuck? xd
 void CHyprspaceWidget::draw() {
-
+    Debug::log(LOG, "[Hyprspace] draw() start");
     workspaceBoxes.clear();
 
     if (!active && !curYOffset->isBeingAnimated()) return;
@@ -280,7 +298,7 @@ void CHyprspaceWidget::draw() {
         CBox curWorkspaceBox = {curWorkspaceRectOffsetX, curWorkspaceRectOffsetY, workspaceBoxW, workspaceBoxH};
 
         // workspace background rect (NOT background layer) and border
-        if (ws == owner->m_activeWorkspace) {
+        if (ws && ws == owner->m_activeWorkspace) {
             if (Config::workspaceBorderSize >= 1 && Config::workspaceActiveBorder.a > 0) {
                 renderBorder(curWorkspaceBox, CGradientValueData(Config::workspaceActiveBorder), Config::workspaceBorderSize);
             }
@@ -312,9 +330,9 @@ void CHyprspaceWidget::draw() {
             for (auto& ls : owner->m_layerSurfaceLayers[0]) {
                 const auto lsPtr = ls.lock();
                 if (!lsPtr) continue;
-                const auto lsBox = ((Desktop::View::CLayerSurface*)lsPtr.get())->surfaceLogicalBox();
-                if (!lsBox.has_value()) continue;
-                CBox layerBox = {curWorkspaceBox.pos() + (lsBox->pos() - owner->m_position) * monitorSizeScaleFactor, lsBox->size() * monitorSizeScaleFactor};
+                const auto lsBoxPos = lsPtr->m_realPosition->value();
+                const auto lsBoxSize = lsPtr->m_realSize->value();
+                CBox layerBox(curWorkspaceBox.pos() + (lsBoxPos - owner->m_position) * monitorSizeScaleFactor, lsBoxSize * monitorSizeScaleFactor);
                 g_pHyprOpenGL->m_renderData.clipBox = curWorkspaceBox;
                 renderLayerStub(lsPtr, owner, layerBox, &time);
                 g_pHyprOpenGL->m_renderData.clipBox = CBox();
@@ -322,9 +340,9 @@ void CHyprspaceWidget::draw() {
             for (auto& ls : owner->m_layerSurfaceLayers[1]) {
                 const auto lsPtr = ls.lock();
                 if (!lsPtr) continue;
-                const auto lsBox = ((Desktop::View::CLayerSurface*)lsPtr.get())->surfaceLogicalBox();
-                if (!lsBox.has_value()) continue;
-                CBox layerBox = {curWorkspaceBox.pos() + (lsBox->pos() - owner->m_position) * monitorSizeScaleFactor, lsBox->size() * monitorSizeScaleFactor};
+                const auto lsBoxPos = lsPtr->m_realPosition->value();
+                const auto lsBoxSize = lsPtr->m_realSize->value();
+                CBox layerBox(curWorkspaceBox.pos() + (lsBoxPos - owner->m_position) * monitorSizeScaleFactor, lsBoxSize * monitorSizeScaleFactor);
                 g_pHyprOpenGL->m_renderData.clipBox = curWorkspaceBox;
                 renderLayerStub(lsPtr, owner, layerBox, &time);
                 g_pHyprOpenGL->m_renderData.clipBox = CBox();
@@ -405,9 +423,9 @@ void CHyprspaceWidget::draw() {
                 for (auto& ls : owner->m_layerSurfaceLayers[2]) {
                     const auto lsPtr = ls.lock();
                     if (!lsPtr) continue;
-                    const auto lsBox = ((Desktop::View::CLayerSurface*)lsPtr.get())->surfaceLogicalBox();
-                    if (!lsBox.has_value()) continue;
-                    CBox layerBox = {curWorkspaceBox.pos() + (lsBox->pos() - owner->m_position) * monitorSizeScaleFactor, lsBox->size() * monitorSizeScaleFactor};
+                const auto lsBoxPos = lsPtr->m_realPosition->value();
+                const auto lsBoxSize = lsPtr->m_realSize->value();
+                CBox layerBox(curWorkspaceBox.pos() + (lsBoxPos - owner->m_position) * monitorSizeScaleFactor, lsBoxSize * monitorSizeScaleFactor);
                     g_pHyprOpenGL->m_renderData.clipBox = curWorkspaceBox;
                     renderLayerStub(lsPtr, owner, layerBox, &time);
                     g_pHyprOpenGL->m_renderData.clipBox = CBox();
@@ -417,9 +435,9 @@ void CHyprspaceWidget::draw() {
                 for (auto& ls : owner->m_layerSurfaceLayers[3]) {
                     const auto lsPtr = ls.lock();
                     if (!lsPtr) continue;
-                    const auto lsBox = ((Desktop::View::CLayerSurface*)lsPtr.get())->surfaceLogicalBox();
-                    if (!lsBox.has_value()) continue;
-                    CBox layerBox = {curWorkspaceBox.pos() + (lsBox->pos() - owner->m_position) * monitorSizeScaleFactor, lsBox->size() * monitorSizeScaleFactor};
+                const auto lsBoxPos = lsPtr->m_realPosition->value();
+                const auto lsBoxSize = lsPtr->m_realSize->value();
+                CBox layerBox(curWorkspaceBox.pos() + (lsBoxPos - owner->m_position) * monitorSizeScaleFactor, lsBoxSize * monitorSizeScaleFactor);
                     g_pHyprOpenGL->m_renderData.clipBox = curWorkspaceBox;
                     renderLayerStub(lsPtr, owner, layerBox, &time);
                     g_pHyprOpenGL->m_renderData.clipBox = CBox();
