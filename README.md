@@ -1,51 +1,54 @@
-# Hyprspace
+# Hyprspace (Hyprland v0.52+ Edition)
 
-**A workspace overview plugin for Hyprland v0.52+**
+**A workspace overview plugin for Hyprland, resurrected and modernized.**
 
-Hyprspace implements a workspace overview feature similar to KDE Plasma, GNOME and macOS, providing an efficient way of workspace and window management for Hyprland.
+![Hyprspace Demo](https://github.com/KZDKM/Hyprspace/assets/41317840/ed1a585a-30d5-4a79-a6da-8cc0713828f9)
 
 > [!IMPORTANT]
-> **Hyprland v0.52+ Support**: This fork has been updated to work with Hyprland v0.52 and newer versions. The plugin has been migrated to use the new Hyprland API with proper namespace support and public accessors.
+> **Compatibility Alert**: This is a heavily modified fork designed specifically for **Hyprland v0.52 and newer**. It addresses the major API breaking changes that rendered the original plugin unusable.
 
-https://github.com/KZDKM/Hyprspace/assets/41317840/ed1a585a-30d5-4a79-a6da-8cc0713828f9
+---
+
+## 📖 The Resurrection Story
+
+Hyprland v0.52 introduced massive breaking changes to its internal API, leaving many plugins, including the beloved Hyprspace, in a broken state. With the original project seemingly inactive, this fork was created to bring it back to life.
+
+We didn't just patch it; we rebuilt the core logic to align with modern Hyprland architecture:
+*   **API Overhaul**: Migrated from deprecated `Desktop::View` namespaces to the new flat `desktop/` structure.
+*   **Modern C++ Standards**: Updated to C++23 to match Hyprland's requirements.
+*   **Fixing the Unfixable**: Solved complex linking errors (`undefined symbol`) and runtime crashes that plagued the migration process.
+
+👉 **[Read the full War Story here (MIGRATION_JOURNEY.md)](MIGRATION_JOURNEY.md)** - A deep dive into the technical challenges of this migration.
+
+---
 
 ## ✨ Features
 
-- **Workspace Overview**: Visual overview of all workspaces with live window previews
-- **Drag & Drop**: Move windows between workspaces by dragging
-- **Multi-Monitor Support**: Works seamlessly across multiple monitors
-- **Touch Gestures**: Swipe gestures for opening overview and navigating
-- **Highly Configurable**: Extensive styling and behavior options
-- **Performance**: Hardware-accelerated rendering with minimal overhead
+- **Workspace Overview**: Visual overview of all workspaces with live window previews.
+- **Drag & Drop**: Move windows between workspaces intuitively.
+- **Multi-Monitor**: Seamless support for multi-head setups.
+- **Touch Gestures**: Swipe to open/close (perfect for laptops).
+- **Customizable**: Extensive styling options to match your rice.
 
 ## 📦 Installation
 
-### Arch Linux (AUR)
+### Option 1: Arch Linux (AUR)
 
-The easiest way to install on Arch Linux:
+The easiest method. This package tracks this fork.
 
 ```bash
-# Using yay
 yay -S hyprspace-git
-
-# Using paru
+# or
 paru -S hyprspace-git
 ```
 
-After installation, add to your Hyprland config:
-```conf
-plugin = /usr/lib/hyprland/plugins/Hyprspace.so
-```
+### Option 2: Manual Build
 
-See [docs/INSTALL_AUR.md](docs/INSTALL_AUR.md) for detailed AUR installation instructions.
-
-### Manual Build
-
-Requirements:
-- Hyprland v0.52+ headers
-- gcc/g++ with C++23 support
-- pkg-config
-- Required libraries: pixman, libdrm, cairo, pango
+**Prerequisites:**
+*   Hyprland v0.52+ (headers must match your installed binary)
+*   `gcc` / `g++` (C++23 support)
+*   `pkg-config`
+*   `pixman`, `libdrm`, `cairo`, `pango`
 
 ```bash
 git clone https://github.com/Sidix130/Hyprspace.git
@@ -53,183 +56,129 @@ cd Hyprspace
 make all
 ```
 
-Load the plugin:
-```conf
-# In your hyprland.conf
-exec-once = hyprctl plugin load /path/to/Hyprspace.so
+To install manually:
+```bash
+# Copy the compiled plugin to your Hyprland plugins directory
+mkdir -p ~/.config/hypr/plugins
+cp Hyprspace.so ~/.config/hypr/plugins/
 ```
 
-### Hyprpm
+### Option 3: Hyprpm
 
 ```bash
 hyprpm add https://github.com/Sidix130/Hyprspace
 hyprpm enable Hyprspace
 ```
 
-### Nix
-
-```nix
-{
-  inputs = {
-    hyprland.url = "git+https://github.com/hyprwm/Hyprland?submodules=1";
-    Hyprspace = {
-      url = "github:Sidix130/Hyprspace";
-      inputs.hyprland.follows = "hyprland";
-    };
-  };
-
-  # In your configuration:
-  wayland.windowManager.hyprland.plugins = [
-    inputs.Hyprspace.packages.${pkgs.system}.Hyprspace
-  ];
-}
-```
-
-##  Usage
-
-### Opening Overview
-
-Bind the dispatcher to a key in your `hyprland.conf`:
-```conf
-bind = SUPER, TAB, hyprspace:toggle
-bind = SUPER SHIFT, TAB, hyprspace:toggle, all  # Toggle on all monitors
-```
-
-Or use a vertical swipe gesture (if gestures are enabled).
-
-### Interaction
-
-**Window Management:**
-- Click on workspace to switch to it
-- Click and drag a window to move it
-- Drop window on another workspace to move it there
-- Click on empty area in workspace view to create new workspace
-
-**Navigation:**
-- Scroll or swipe on panel to navigate through workspaces
-- Use arrow keys to navigate (if enabled)
-
-**Exiting:**
-- Click without dragging to exit
-- Press `ESC` (or configured exit key) to exit
-- Auto-exit on workspace switch (if configured)
+---
 
 ## ⚙️ Configuration
 
-### Dispatchers
+Add this to your `hyprland.conf`:
 
-- `hyprspace:toggle` - Toggle workspace overview
-- `hyprspace:open` - Open workspace overview  
-- `hyprspace:close` - Close workspace overview
-- Add `all` argument to affect all monitors: `hyprspace:toggle all`
+```ini
+# Load the plugin
+plugin = ~/.config/hypr/plugins/Hyprspace.so
 
-### Styling
+# Keybinding to toggle the overview
+bind = SUPER, TAB, hyprspace:toggle
+```
 
-#### Colors
-```conf
-plugin:overview {
-    panelColor = rgba(0, 0, 0, 0.5)
-    panelBorderColor = rgba(255, 255, 255, 0.2)
-    workspaceActiveBackground = rgba(0, 0, 0, 0.25)
-    workspaceInactiveBackground = rgba(0, 0, 0, 0.5)
-    workspaceActiveBorder = rgba(255, 255, 255, 0.3)
-    workspaceInactiveBorder = rgba(255, 255, 255, 0)
-    dragAlpha = 0.2
+### Customization
+
+You can tweak every aspect of the look and feel. Here is a robust default configuration:
+
+```ini
+plugin {
+    overview {
+        # Layout
+        panelHeight = 250
+        panelBorderWidth = 2
+        workspaceMargin = 12
+        reservedArea = 0
+        centerAligned = true
+        
+        # Colors
+        panelColor = rgba(0, 0, 0, 0.5)
+        panelBorderColor = rgba(255, 255, 255, 0.2)
+        workspaceActiveBackground = rgba(0, 0, 0, 0.25)
+        workspaceInactiveBackground = rgba(0, 0, 0, 0.5)
+        workspaceActiveBorder = rgba(255, 255, 255, 0.3)
+        workspaceInactiveBorder = rgba(255, 255, 255, 0)
+        
+        # Behavior
+        autoDrag = true
+        autoScroll = true
+        exitOnClick = true
+        switchOnDrop = true
+        showNewWorkspace = true
+    }
 }
 ```
 
-#### Layout
-```conf
-plugin:overview {
-    panelHeight = 250
-    panelBorderWidth = 2
-    workspaceMargin = 12
-    reservedArea = 0              # For top notch/bar
-    workspaceBorderSize = 1
-    centerAligned = true          # KDE/macOS style
-    onBottom = false              # Panel position
-}
+## 🎮 Usage
+
+*   **Open/Close**: Press your bind (`SUPER+TAB`) or swipe 3 fingers up/down (if gestures enabled).
+*   **Move Windows**: Drag a window from one workspace to another.
+*   **Create Workspace**: Click the "plus" icon or an empty space.
+*   **Navigate**: Scroll wheel or arrow keys.
+
+
+
+## 🏗️ Architecture
+
+Here is a high-level overview of how Hyprspace interacts with Hyprland:
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Hyprland
+    participant Plugin as Hyprspace (Plugin)
+    participant Widget as CHyprspaceWidget
+    participant Renderer as Render Loop
+
+    Note over Hyprland, Plugin: Initialization
+    Hyprland->>Plugin: PLUGIN_INIT
+    Plugin->>Hyprland: Register Dispatchers (hyprspace:toggle)
+    Plugin->>Hyprland: Register Hooks (Render, Input, Config)
+
+    Note over User, Widget: Activation
+    User->>Hyprland: Press SUPER+TAB
+    Hyprland->>Plugin: dispatchToggleOverview()
+    Plugin->>Widget: toggle()
+    
+    rect rgb(20, 20, 20)
+        Note right of Widget: Show Animation
+        Widget->>Hyprland: Unfullscreen Windows
+        Widget->>Hyprland: Hide Overlay Layers
+        Widget->>Widget: Calculate Grid Layout
+        Widget->>Hyprland: damageMonitor() (Request Frame)
+    end
+
+    Note over Hyprland, Renderer: Rendering Cycle
+    loop Every Frame
+        Hyprland->>Plugin: Render Hook
+        Plugin->>Widget: draw()
+        Widget->>Renderer: Draw Background/Panel
+        
+        loop For Each Workspace
+            Widget->>Renderer: Draw Workspace Box
+            loop For Each Window
+                Widget->>Renderer: renderWindowStub()
+                Note right of Renderer: Scales & Translates Window<br/>to fit in the grid
+            end
+        end
+    end
 ```
+## 🤝 Contributing
 
-#### Behavior
-```conf
-plugin:overview {
-    autoDrag = true
-    autoScroll = true
-    exitOnClick = true
-    switchOnDrop = false
-    exitOnSwitch = false
-    showNewWorkspace = true
-    showEmptyWorkspace = true
-    showSpecialWorkspace = false
-    exitKey = Escape              # Leave empty to disable
-}
-```
-
-#### Advanced
-```conf
-plugin:overview {
-    hideBackgroundLayers = false
-    hideTopLayers = false
-    hideOverlayLayers = false
-    hideRealLayers = true
-    drawActiveWorkspace = true
-    affectStrut = true
-    overrideGaps = true
-    gapsIn = 20
-    gapsOut = 60
-    overrideAnimSpeed = 0         # 0 = use default
-    disableBlur = false
-    disableGestures = false
-    reverseSwipe = false
-}
-```
-
-## 🔧 Plugin Compatibility
-
-- ✅ [hyprsplit](https://github.com/shezdy/hyprsplit) - Explicit support
-- ✅ [split-monitor-workspaces](https://github.com/Duckonaut/split-monitor-workspaces) - Explicit support
-- ✅ [hyprexpo](https://github.com/hyprwm/hyprland-plugins/tree/main/hyprexpo) - Minor bugs
-- ✅ Any layout plugin (except ones overriding workspace management)
-
-## 📝 Migration from v0.51
-
-This fork includes updates for Hyprland v0.52+ compatibility:
-
-- **Dispatcher Names**: Changed from `overview:*` to `hyprspace:*`  
-  Update your bindings: `overview:toggle` → `hyprspace:toggle`
-  
-- **API Changes**: Updated to use new public accessors and namespaces
-- **Build System**: Improved Makefile with better header resolution
-
-See [docs/V0.52_hyprland/](docs/V0.52_hyprland/) for migration reference files.
-
-## 🛠️ Development
-
-### Building from Source
-```bash
-make all          # Build plugin
-make clean        # Clean build artifacts
-```
-
-### Creating AUR Package
-```bash
-makepkg -si       # Build and install locally
-makepkg --printsrcinfo > .SRCINFO  # Update package metadata
-```
-
-## 📄 License
-
-BSD 3-Clause License - See [LICENSE](LICENSE) for details.
+Issues and Pull Requests are welcome! If you find a bug specific to Hyprland v0.52+, please report it.
 
 ## 🙏 Credits
 
-- Original plugin by [KZDKM](https://github.com/KZDKM/Hyprspace)
-- Hyprland v0.52+ migration by [Sidix130](https://github.com/Sidix130)
-- All awesome [contributors](https://github.com/KZDKM/Hyprspace/graphs/contributors)
+*   **Original Author**: [KZDKM](https://github.com/KZDKM) - For creating this amazing plugin.
+*   **Migration Lead**: [Sidix130](https://github.com/Sidix130) - For the v0.52+ port.
+*   **Community**: All the contributors who kept the hope alive.
 
-## 🔗 Links
-
-- [Original Repository](https://github.com/KZDKM/Hyprspace)
-- [Hyprland](https://github.com/hyprwm/Hyprland)
-- [Report Issues](https://github.com/Sidix130/Hyprspace/issues)
+---
+*Maintained with ❤️ for the Hyprland Community.*
