@@ -82,6 +82,7 @@ void renderWindowStub(PHLWINDOW pWindow, PHLMONITOR pMonitor, PHLWORKSPACE pWork
 
     const auto oWorkspace = pWindow->m_workspace;
     const auto oFullscreen = pWindow->m_fullscreenState;
+    const auto oAlpha = pWindow->m_alpha->value();
     const auto windowBox = pWindow->getWindowMainSurfaceBox();
     const auto oRealPosition = windowBox.pos();
     const auto oSize = windowBox.size();
@@ -103,6 +104,7 @@ void renderWindowStub(PHLWINDOW pWindow, PHLMONITOR pMonitor, PHLWORKSPACE pWork
     pWindow->m_windowData.nearestNeighbor = false;
     pWindow->m_isFloating = false;
     pWindow->m_pinned = true;
+    pWindow->m_alpha->setValue(1.f); // Force l'opacité à 100%
     pWindow->m_windowData.rounding = CWindowOverridableVar<Hyprlang::INT>(pWindow->rounding() * curScaling * pMonitor->m_scale, PRIORITY_SET_PROP);
     g_pInputManager->m_currentlyDraggedWindow = pWindow; // override these and force INTERACTIVERESIZEINPROGRESS = true to trick the renderer
     g_pInputManager->m_dragMode = MBIND_RESIZE;
@@ -135,6 +137,7 @@ void renderWindowStub(PHLWINDOW pWindow, PHLMONITOR pMonitor, PHLWORKSPACE pWork
     pWindow->m_windowData.nearestNeighbor = oUseNearestNeighbor;
     pWindow->m_isFloating = oFloating;
     pWindow->m_pinned = oPinned;
+    pWindow->m_alpha->setValue(oAlpha); // Remet l'opacité d'origine
     pWindow->m_windowData.rounding.unset(PRIORITY_SET_PROP);
     g_pInputManager->m_currentlyDraggedWindow = oDraggedWindow;
     g_pInputManager->m_dragMode = oDragMode;
