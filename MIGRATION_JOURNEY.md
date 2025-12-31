@@ -1,62 +1,69 @@
-# ⚔️ Récit de Migration : Hyprspace vs Hyprland v0.52+
+---
 
-> **Statut :** Victoire 🏆
-> **Difficulté :** 8/10 (Mode Cauchemar)
-> **Contexte :** Projet abandonné par le créateur, API Hyprland en rupture totale.
+### Fichier 2 : `MIGRATION_JOURNEY.md`
+*(Traduit en anglais pour GitHub, car c'est la langue des devs Hyprland. Garde la version française pour ton blog/LinkedIn)*.
 
-Ce document retrace la bataille pour porter le plugin **Hyprspace** sur **Hyprland v0.52+**. Ce n'était pas une simple mise à jour, c'était une reconstruction sur un terrain miné.
+```markdown
+# ⚔️ Migration Log: Hyprspace vs Hyprland v0.52+
+
+> **Status:** Victory 🏆
+> **Difficulty:** 8/10 (Nightmare Mode)
+> **Context:** Abandoned project, Breaking Changes in Hyprland API.
+
+This document traces the battle to port the **Hyprspace** plugin to **Hyprland v0.52+**. It wasn't just a simple update; it was a reconstruction on a minefield.
 
 ---
 
-## 💥 Chapitre 1 : Le Grand Tremblement de Terre (API Break)
 
-Hyprland v0.52 a décidé de faire le ménage. Radicalement.
-Quand on a ouvert le capot, plus rien ne correspondait :
+## 💥 Chapter 1: The Great Earthquake (API Break)
 
-*   **L'Exode des Headers :** Tout ce qui était dans `desktop/view/` a déménagé dans `desktop/`. `LayerSurface.hpp`, `Window.hpp`... tous les chemins étaient cassés.
-*   **La Purge des Namespaces :** `using namespace Desktop::View;` ? Disparu. `Desktop::Types` ? Envolé. Il a fallu nettoyer le code au lance-flammes pour retirer ces références obsolètes.
-*   **Les Disparus :**
-    *   `ReservedArea` : Mort au combat. Remplacé par une gestion directe via `pMonitor->m_reservedTopLeft` et `BottomRight`.
-    *   `WindowRuleApplicator` : Porté disparu. Ses fonctions (`noBlur`, `rounding`, `nearestNeighbor`) ont été absorbées directement dans `m_windowData` de la classe `CWindow`.
-    *   `PHLANIMVAR` : Une macro vitale pour les animations, supprimée. On a dû la remplacer par la nouvelle classe `CAnimatedVariable` de `Hyprutils`.
+Hyprland v0.52 decided to clean house. Radically.
+When we popped the hood, nothing matched anymore:
 
-## 🕵️ Chapitre 2 : Le Piège des Versions (Headers vs Source)
+*   **The Header Exodus:** Everything that was in `desktop/view/` moved to `desktop/`. `LayerSurface.hpp`, `Window.hpp`... all paths were broken.
+*   **Namespace Purge:** `using namespace Desktop::View;`? Gone. `Desktop::Types`? Vanished. We had to flamethrower the code to remove these obsolete references.
+*   **The Missing In Action:**
+    *   `ReservedArea`: KIA. Replaced by direct management via `pMonitor->m_reservedTopLeft` and `BottomRight`.
+    *   `WindowRuleApplicator`: Missing. Its functions (`noBlur`, `rounding`, `nearestNeighbor`) were absorbed directly into `m_windowData` of the `CWindow` class.
+    *   `PHLANIMVAR`: A vital macro for animations, deleted. We had to replace it with the new `CAnimatedVariable` class from `Hyprutils`.
 
-C'était le moment le plus frustrant.
-*   **Le setup :** On avait les sources locales de Hyprland en **v0.53.0** (la pointe).
-*   **La réalité :** Le système tournait avec les headers de la **v0.52.2**.
+## 🕵️ Chapter 2: The Version Trap (Headers vs Source)
 
-Le code semblait correct quand on lisait les fichiers `.hpp` locaux, mais le compilateur nous insultait parce qu'il lisait les fichiers de `/usr/include`. On a dû forcer le `Makefile` à ignorer nos sources locales pour se fier uniquement à la vérité du système. **Leçon apprise : Toujours vérifier contre quoi on compile vraiment.**
+This was the most frustrating moment.
+*   **The Setup:** We had local Hyprland sources in **v0.53.0** (bleeding edge git).
+*   **The Reality:** The system was running with **v0.52.2** headers.
 
-## 💀 Chapitre 3 : Le Boss de Fin (Undefined Symbol)
+The code looked correct when reading local `.hpp` files, but the compiler screamed because it was reading `/usr/include`. We had to force the `Makefile` to ignore our local sources and rely solely on the system truth. **Lesson learned: Always verify what you are actually compiling against.**
 
-Tout compile. On lance. **Crash.**
+## 💀 Chapter 3: The Final Boss (Undefined Symbol)
+
+Everything compiles. We launch. **Crash.**
 `undefined symbol: NColorManagement::CImageDescription::from`
 
-C'était vicieux. Ce n'était pas une erreur de code, mais une erreur de **linkage**.
-*   Le plugin cherchait une fonction qui n'existait pas dans le binaire Hyprland en cours d'exécution.
-*   **La cause :** Une vieille version du plugin (`Hyprspace.so`) traînait dans `~/.config/hypr/plugins/` et était chargée à la place de notre nouvelle version fraîchement compilée.
-*   **Le fix :** Un `cp` brutal pour écraser l'ancien fichier et s'assurer que Hyprland chargeait bien notre travail.
+This was vicious. It wasn't a code error, but a **linking** error.
+*   The plugin was looking for a function that didn't exist in the running Hyprland binary.
+*   **The Cause:** An old version of the plugin (`Hyprspace.so`) was lingering in `~/.config/hypr/plugins/` and was being loaded instead of our freshly compiled version.
+*   **The Fix:** A brutal `cp` to overwrite the old file and ensure Hyprland loaded our work.
 
-## 🧟 Chapitre 4 : Le Fantôme dans la Machine
+## 🧟 Chapter 4: The Ghost in the Machine
 
-Dernière frayeur. Le plugin refusait de se charger avec une erreur "Fichier introuvable" pointant vers un dossier `~/workers-cpp` qui n'existait même pas.
-*   **L'enquête :** `grep` ne trouvait rien dans les configs.
-*   **Le coupable :** La base de données interne de `hyprpm` ou une config cachée qui avait mémorisé un ancien chemin d'installation.
-*   **La solution :** Nettoyage par le vide (`hyprpm remove`, vérification des configs) et relance propre.
-
----
-
-## 🛠️ Résumé Technique pour les Survivants
-
-Si vous devez toucher à ce code, voici les cicatrices à surveiller :
-
-1.  **CWindowOverridableVar** est votre ami. N'utilisez plus l'ancien `COverridableVar`.
-2.  **Pas de `surfaceLogicalBox()`**. Pour la position des layers, tapez directement dans `m_realPosition` et `m_realSize`.
-3.  **Initialisation CBox**. Plus de `{pos, size}`, il faut être poli et utiliser le constructeur `CBox(pos, size)`.
-4.  **Nestest est vital**. Le script `launch-lab.sh` qui lance une session Hyprland imbriquée nous a sauvé la vie. Ne développez jamais sans ça.
+Last scare. The plugin refused to load with a "File not found" error pointing to a folder `~/workers-cpp` that didn't even exist.
+*   **Investigation:** `grep` found nothing in the configs.
+*   **The Culprit:** The internal database of `hyprpm` or a hidden config that had memorized an old installation path.
+*   **The Solution:** Nuclear cleaning (`hyprpm remove`, config check) and a clean restart.
 
 ---
 
-**État Final :** Le plugin tourne comme une horloge. Fluide, sans crash, et prêt pour le futur.
-*Mission accomplie.* 🚀
+## 🛠️ Technical Summary for Survivors
+
+If you have to touch this code, here are the scars to watch out for:
+
+1.  **CWindowOverridableVar** is your friend. Don't use the old `COverridableVar`.
+2.  **No `surfaceLogicalBox()`**. For layer positions, tap directly into `m_realPosition` and `m_realSize`.
+3.  **CBox Initialization**. No more `{pos, size}`, you must be polite and use the explicit constructor `CBox(pos, size)`.
+4.  **Nestest is vital**. The `launch-lab.sh` script that launches a nested Hyprland session saved our lives. Never develop without it.
+
+---
+
+**Final State:** The plugin runs like clockwork. Fluid, crash-free, and ready for the future.
+*Mission Accomplished.* 🚀

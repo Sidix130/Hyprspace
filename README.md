@@ -1,3 +1,15 @@
+C'est du **très bon travail**. Le ton est parfait : professionnel mais avec cette touche de "passionné" qui plaît aux développeurs. Le diagramme Mermaid ajoute une crédibilité technique immédiate.
+
+J'ai juste **peaufiné l'anglais** pour qu'il soit "natif" et percutant, et j'ai **traduit le Récit de Migration en anglais** car sur GitHub, c'est la langue universelle (et ça maximisera tes étoiles).
+
+Voici les deux fichiers prêts à être copiés-collés dans ton repo.
+
+---
+
+### Fichier 1 : `README.md`
+*(Optimisé pour le référencement et la clarté)*
+
+
 # Hyprspace (Hyprland v0.52+ Edition)
 
 **A workspace overview plugin for Hyprland, resurrected and modernized.**
@@ -5,7 +17,7 @@
 ![Hyprspace Demo](https://github.com/KZDKM/Hyprspace/assets/41317840/ed1a585a-30d5-4a79-a6da-8cc0713828f9)
 
 > [!IMPORTANT]
-> **Compatibility Alert**: This is a heavily modified fork designed specifically for **Hyprland v0.52 and newer**. It addresses the major API breaking changes that rendered the original plugin unusable.
+> **Compatibility Alert**: This is a heavily modified fork designed specifically for **Hyprland v0.52 and newer**. It addresses the major API breaking changes (Aquamarine/Hyprutils) that rendered the original plugin unusable.
 
 ---
 
@@ -15,8 +27,9 @@ Hyprland v0.52 introduced massive breaking changes to its internal API, leaving 
 
 We didn't just patch it; we rebuilt the core logic to align with modern Hyprland architecture:
 *   **API Overhaul**: Migrated from deprecated `Desktop::View` namespaces to the new flat `desktop/` structure.
-*   **Modern C++ Standards**: Updated to C++23 to match Hyprland's requirements.
-*   **Fixing the Unfixable**: Solved complex linking errors (`undefined symbol`) and runtime crashes that plagued the migration process.
+*   **Modern C++ Standards**: Updated codebase to C++23.
+*   **Memory Safety**: Fixed multiple Segmentation Faults caused by unsafe pointer usage in the original code.
+*   **Fixing the Unfixable**: Solved complex linking errors (`undefined symbol`) and ABI mismatches.
 
 👉 **[Read the full War Story here (MIGRATION_JOURNEY.md)](MIGRATION_JOURNEY.md)** - A deep dive into the technical challenges of this migration.
 
@@ -123,8 +136,6 @@ plugin {
 *   **Create Workspace**: Click the "plus" icon or an empty space.
 *   **Navigate**: Scroll wheel or arrow keys.
 
-
-
 ## 🏗️ Architecture
 
 Here is a high-level overview of how Hyprspace interacts with Hyprland:
@@ -170,6 +181,7 @@ sequenceDiagram
         end
     end
 ```
+
 ## 🤝 Contributing
 
 Issues and Pull Requests are welcome! If you find a bug specific to Hyprland v0.52+, please report it.
@@ -182,3 +194,4 @@ Issues and Pull Requests are welcome! If you find a bug specific to Hyprland v0.
 
 ---
 *Maintained with ❤️ for the Hyprland Community.*
+---
