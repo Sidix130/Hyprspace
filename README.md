@@ -1,65 +1,117 @@
-C'est du **très bon travail**. Le ton est parfait : professionnel mais avec cette touche de "passionné" qui plaît aux développeurs. Le diagramme Mermaid ajoute une crédibilité technique immédiate.
-
-J'ai juste **peaufiné l'anglais** pour qu'il soit "natif" et percutant, et j'ai **traduit le Récit de Migration en anglais** car sur GitHub, c'est la langue universelle (et ça maximisera tes étoiles).
-
-Voici les deux fichiers prêts à être copiés-collés dans ton repo.
-
----
-
-### Fichier 1 : `README.md`
-*(Optimisé pour le référencement et la clarté)*
 
 
-# Hyprspace (Hyprland v0.52+ Edition)
+<div align="center">
 
-**A workspace overview plugin for Hyprland, resurrected and modernized.**
+# Hyprspace (Revived)
 
-![Hyprspace Demo](https://github.com/KZDKM/Hyprspace/assets/41317840/ed1a585a-30d5-4a79-a6da-8cc0713828f9)
+*Le plugin de vue d'ensemble pour Hyprland, ressuscité et modernisé pour la v0.52+.*
+
+[![Licence: BSD-3-Clause](https://img.shields.io/badge/Licence-BSD--3--Clause-blue.svg?style=for-the-badge&logo=opensource)](LICENSE)
+[![Status](https://img.shields.io/badge/Status-Stable-2ea44f?style=for-the-badge&logo=github)](https://github.com/Sidix130/Hyprspace)
+[![Hyprland](https://img.shields.io/badge/Hyprland-v0.52%2B-0052cc?style=for-the-badge&logo=archlinux)](https://github.com/hyprwm/Hyprland)
+
+## <p>｡ ₊°༺ [Sidix130](https://github.com/Sidix130) ༻°₊ ｡</p>
+
+### [🏛️ #Histoire](#histoire) • [✨ #Fonctionnalités](#fonctionnalités) • [⚙️ #Architecture](#architecture) • [🛠️ #Installation](#installation) • [🤝 #Crédits](#crédits)
+
+### ![Hyprspace Demo](https://github.com/KZDKM/Hyprspace/assets/41317840/ed1a585a-30d5-4a79-a6da-8cc0713828f9)
 
 > [!IMPORTANT]
 > **Compatibility Alert**: This is a heavily modified fork designed specifically for **Hyprland v0.52 and newer**. It addresses the major API breaking changes (Aquamarine/Hyprutils) that rendered the original plugin unusable.
 
----
-
-## 📖 The Resurrection Story
-
-Hyprland v0.52 introduced massive breaking changes to its internal API, leaving many plugins, including the beloved Hyprspace, in a broken state. With the original project seemingly inactive, this fork was created to bring it back to life.
-
-We didn't just patch it; we rebuilt the core logic to align with modern Hyprland architecture:
-*   **API Overhaul**: Migrated from deprecated `Desktop::View` namespaces to the new flat `desktop/` structure.
-*   **Modern C++ Standards**: Updated codebase to C++23.
-*   **Memory Safety**: Fixed multiple Segmentation Faults caused by unsafe pointer usage in the original code.
-*   **Fixing the Unfixable**: Solved complex linking errors (`undefined symbol`) and ABI mismatches.
-
-👉 **[Read the full War Story here (MIGRATION_JOURNEY.md)](MIGRATION_JOURNEY.md)** - A deep dive into the technical challenges of this migration.
+</div>
 
 ---
 
-## ✨ Features
+## <a name="histoire"></a>🏛️ Histoire
 
-- **Workspace Overview**: Visual overview of all workspaces with live window previews.
-- **Drag & Drop**: Move windows between workspaces intuitively.
-- **Multi-Monitor**: Seamless support for multi-head setups.
-- **Touch Gestures**: Swipe to open/close (perfect for laptops).
-- **Customizable**: Extensive styling options to match your rice.
+Hyprland v0.52 a introduit des changements massifs (Breaking Changes) dans son API interne, brisant la plupart des plugins, dont le célèbre Hyprspace. Avec le projet original apparemment inactif, ce fork a été créé pour le ramener à la vie.
 
-## 📦 Installation
+Nous n'avons pas juste appliqué un patch ; nous avons reconstruit la logique cœur pour s'aligner avec l'architecture moderne de Hyprland :
 
-### Option 1: Arch Linux (AUR)
+1.  **Refonte API :** Migration des namespaces obsolètes `Desktop::View` vers la nouvelle structure plate `desktop/`.
+2.  **Standards C++ Modernes :** Mise à jour vers C++23 pour correspondre aux exigences de Hyprland.
+3.  **Réparation de l'Irréparable :** Résolution des erreurs de link complexes (`undefined symbol`) et des crashs au runtime (Segfaults) qui bloquaient la migration.
 
-The easiest method. This package tracks this fork.
+👉 **[Lire le Récit de Guerre complet (MIGRATION_JOURNEY.md)](MIGRATION_JOURNEY.md)** - Une plongée technique dans les défis de cette migration.
+
+---
+
+## <a name="fonctionnalités"></a>✨ Fonctionnalités
+
+*   **Workspace Overview :** Vue d'ensemble visuelle de tous les espaces de travail avec prévisualisation en direct.
+*   **Drag & Drop :** Déplacez les fenêtres d'un espace à l'autre intuitivement à la souris.
+*   **Multi-Monitor :** Support transparent des configurations multi-écrans.
+*   **Touch Gestures :** Swipe à 3 doigts pour ouvrir/fermer (parfait pour les laptops).
+*   **Customizable :** Options de style étendues pour matcher votre "rice".
+
+---
+
+## <a name="architecture"></a>⚙️ Architecture
+
+Voici un aperçu de haut niveau de l'interaction entre Hyprspace et le moteur Hyprland :
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Hyprland
+    participant Plugin as Hyprspace (Plugin)
+    participant Widget as CHyprspaceWidget
+    participant Renderer as Render Loop
+
+    Note over Hyprland, Plugin: Initialization
+    Hyprland->>Plugin: PLUGIN_INIT
+    Plugin->>Hyprland: Register Dispatchers (hyprspace:toggle)
+    Plugin->>Hyprland: Register Hooks (Render, Input, Config)
+
+    Note over User, Widget: Activation
+    User->>Hyprland: Press SUPER+TAB
+    Hyprland->>Plugin: dispatchToggleOverview()
+    Plugin->>Widget: toggle()
+    
+    rect rgb(30, 30, 30)
+        Note right of Widget: Show Animation
+        Widget->>Hyprland: Unfullscreen Windows
+        Widget->>Hyprland: Hide Overlay Layers
+        Widget->>Widget: Calculate Grid Layout
+        Widget->>Hyprland: damageMonitor() (Request Frame)
+    end
+
+    Note over Hyprland, Renderer: Rendering Cycle
+    loop Every Frame
+        Hyprland->>Plugin: Render Hook
+        Plugin->>Widget: draw()
+        Widget->>Renderer: Draw Background/Panel
+        
+        loop For Each Workspace
+            Widget->>Renderer: Draw Workspace Box
+            loop For Each Window
+                Widget->>Renderer: renderWindowStub()
+                Note right of Renderer: Scales & Translates Window<br/>to fit in the grid
+            end
+        end
+    end
+```
+
+---
+
+## <a name="installation"></a>🛠️ Installation
+
+### 📦 Option 1: Arch Linux (AUR)
+
+La méthode recommandée. Ce paquet suit ce fork.
 
 ```bash
 yay -S hyprspace-git
-# or
+# ou
 paru -S hyprspace-git
 ```
 
-### Option 2: Manual Build
+### 🔨 Option 2: Compilation Manuelle
 
-**Prerequisites:**
-*   Hyprland v0.52+ (headers must match your installed binary)
-*   `gcc` / `g++` (C++23 support)
+**Prérequis :**
+*   Hyprland v0.52+ (les headers doivent correspondre à votre binaire installé)
+*   `gcc` / `g++` (support C++23)
 *   `pkg-config`
 *   `pixman`, `libdrm`, `cairo`, `pango`
 
@@ -69,37 +121,26 @@ cd Hyprspace
 make all
 ```
 
-To install manually:
+Pour installer manuellement :
 ```bash
-# Copy the compiled plugin to your Hyprland plugins directory
+# Copier le plugin compilé dans votre dossier Hyprland
 mkdir -p ~/.config/hypr/plugins
 cp Hyprspace.so ~/.config/hypr/plugins/
 ```
 
-### Option 3: Hyprpm
+### ⚙️ Configuration
 
-```bash
-hyprpm add https://github.com/Sidix130/Hyprspace
-hyprpm enable Hyprspace
-```
-
----
-
-## ⚙️ Configuration
-
-Add this to your `hyprland.conf`:
+Ajoutez ceci à votre `hyprland.conf` :
 
 ```ini
-# Load the plugin
+# Charger le plugin
 plugin = ~/.config/hypr/plugins/Hyprspace.so
 
-# Keybinding to toggle the overview
+# Raccourci pour ouvrir/fermer la vue
 bind = SUPER, TAB, hyprspace:toggle
 ```
 
-### Customization
-
-You can tweak every aspect of the look and feel. Here is a robust default configuration:
+#### Customisation (Exemple Robuste)
 
 ```ini
 plugin {
@@ -129,69 +170,17 @@ plugin {
 }
 ```
 
-## 🎮 Usage
+---
 
-*   **Open/Close**: Press your bind (`SUPER+TAB`) or swipe 3 fingers up/down (if gestures enabled).
-*   **Move Windows**: Drag a window from one workspace to another.
-*   **Create Workspace**: Click the "plus" icon or an empty space.
-*   **Navigate**: Scroll wheel or arrow keys.
+## <a name="crédits"></a>🤝 Crédits
 
-## 🏗️ Architecture
+*   **Original Author :** [KZDKM](https://github.com/KZDKM) - Pour la création de ce plugin incroyable.
+*   **Migration Lead :** [Sidix130](https://github.com/Sidix130) - Pour le portage v0.52+.
+*   **Community :** Tous les contributeurs qui ont gardé l'espoir.
 
-Here is a high-level overview of how Hyprspace interacts with Hyprland:
+---
 
-```mermaid
-sequenceDiagram
-    participant User
-    participant Hyprland
-    participant Plugin as Hyprspace (Plugin)
-    participant Widget as CHyprspaceWidget
-    participant Renderer as Render Loop
-
-    Note over Hyprland, Plugin: Initialization
-    Hyprland->>Plugin: PLUGIN_INIT
-    Plugin->>Hyprland: Register Dispatchers (hyprspace:toggle)
-    Plugin->>Hyprland: Register Hooks (Render, Input, Config)
-
-    Note over User, Widget: Activation
-    User->>Hyprland: Press SUPER+TAB
-    Hyprland->>Plugin: dispatchToggleOverview()
-    Plugin->>Widget: toggle()
-    
-    rect rgb(20, 20, 20)
-        Note right of Widget: Show Animation
-        Widget->>Hyprland: Unfullscreen Windows
-        Widget->>Hyprland: Hide Overlay Layers
-        Widget->>Widget: Calculate Grid Layout
-        Widget->>Hyprland: damageMonitor() (Request Frame)
-    end
-
-    Note over Hyprland, Renderer: Rendering Cycle
-    loop Every Frame
-        Hyprland->>Plugin: Render Hook
-        Plugin->>Widget: draw()
-        Widget->>Renderer: Draw Background/Panel
-        
-        loop For Each Workspace
-            Widget->>Renderer: Draw Workspace Box
-            loop For Each Window
-                Widget->>Renderer: renderWindowStub()
-                Note right of Renderer: Scales & Translates Window<br/>to fit in the grid
-            end
-        end
-    end
+<div align="center">
+  <i>Maintained with ❤️ for the Hyprland Community.</i>
+</div>
 ```
-
-## 🤝 Contributing
-
-Issues and Pull Requests are welcome! If you find a bug specific to Hyprland v0.52+, please report it.
-
-## 🙏 Credits
-
-*   **Original Author**: [KZDKM](https://github.com/KZDKM) - For creating this amazing plugin.
-*   **Migration Lead**: [Sidix130](https://github.com/Sidix130) - For the v0.52+ port.
-*   **Community**: All the contributors who kept the hope alive.
-
----
-*Maintained with ❤️ for the Hyprland Community.*
----
